@@ -1,0 +1,135 @@
+{
+  "name": "ec2-with-ssm-access",
+  "terraform_json": {
+    "terraform": {
+      "required_providers": {
+        "aws": {
+          "source": "hashicorp/aws",
+          "version": "6.0.0"
+        }
+      }
+    },
+    "provider": {
+      "aws": {
+        "profile": "developer",
+        "region": "us-east-1"
+      }
+    },
+    "data": {
+      "aws_vpc": {
+        "default": {
+          "default": true
+        }
+      },
+      "aws_subnet": {
+        "default": {
+          "vpc_id": "${data.aws_vpc.default.id}",
+          "default_for_az": true,
+          "availability_zone": "${data.aws_availability_zones.available.names[0]}"
+        }
+      },
+      "aws_availability_zones": {
+        "available": {
+          "state": "available"
+        }
+      },
+      "aws_ami": {
+        "amazon_linux_2023": {
+          "most_recent": true,
+          "owners": ["amazon"],
+          "filter": [
+            {
+              "name": "name",
+              "values": ["al2023-ami-*-x86_64"]
+            },
+            {
+              "name": "virtualization-type",
+              "values": ["hvm"]
+            }
+          ]
+        }
+      }
+    },
+    "resource": {
+      "aws_iam_role": {
+        "ec2_ssm_role": {
+          "name": "lattiam-ec2-ssm-role-${formatdate(\"YYYYMMDD-HHmmss\", timestamp())}",
+          "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ec2.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+          "description": "IAM role for EC2 instance to access SSM Session Manager",
+          "managed_policy_arns": [
+            "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+          ],
+          "tags": {
+            "Service": "ec2",
+            "Purpose": "ssm-access",
+            "ManagedBy": "Lattiam"
+          },
+          "timeouts": {}
+        }
+      },
+      "aws_iam_instance_profile": {
+        "ec2_ssm_profile": {
+          "name": "lattiam-ec2-ssm-profile-${formatdate(\"YYYYMMDD-HHmmss\", timestamp())}",
+          "role": "${aws_iam_role.ec2_ssm_role.name}",
+          "timeouts": {}
+        }
+      },
+      "aws_security_group": {
+        "ec2_ssm_sg": {
+          "name": "lattiam-ec2-ssm-sg-${formatdate(\"YYYYMMDD-HHmmss\", timestamp())}",
+          "description": "Security group for EC2 instance with SSM Session Manager access",
+          "vpc_id": "${data.aws_vpc.default.id}",
+          "egress": [
+            {
+              "description": "HTTPS to AWS SSM endpoints",
+              "from_port": 443,
+              "to_port": 443,
+              "protocol": "tcp",
+              "cidr_blocks": ["0.0.0.0/0"]
+            },
+            {
+              "description": "HTTP for package updates",
+              "from_port": 80,
+              "to_port": 80,
+              "protocol": "tcp",
+              "cidr_blocks": ["0.0.0.0/0"]
+            }
+          ],
+          "tags": {
+            "Name": "lattiam-ec2-ssm-sg",
+            "Purpose": "ssm-access",
+            "ManagedBy": "Lattiam"
+          },
+          "timeouts": {}
+        }
+      },
+      "aws_instance": {
+        "ec2_ssm_instance": {
+          "ami": "${data.aws_ami.amazon_linux_2023.id}",
+          "instance_type": "t3.micro",
+          "iam_instance_profile": "${aws_iam_instance_profile.ec2_ssm_profile.name}",
+          "vpc_security_group_ids": ["${aws_security_group.ec2_ssm_sg.id}"],
+          "subnet_id": "${data.aws_subnet.default.id}",
+          "associate_public_ip_address": true,
+          "root_block_device": {
+            "volume_type": "gp3",
+            "volume_size": 20,
+            "encrypted": true,
+            "delete_on_termination": true
+          },
+          "user_data": "#!/bin/bash\nyum update -y\n\n# Ensure SSM agent is running\nsystemctl enable amazon-ssm-agent\nsystemctl start amazon-ssm-agent\n\n# Install additional tools\nyum install -y htop",
+          "tags": {
+            "Name": "lattiam-ec2-ssm-instance",
+            "Purpose": "ssm-demo",
+            "SSMEnabled": "true",
+            "ManagedBy": "Lattiam"
+          },
+          "timeouts": {}
+        }
+      }
+    }
+  },
+  "config": {
+    "aws_region": "us-east-1"
+  }
+}

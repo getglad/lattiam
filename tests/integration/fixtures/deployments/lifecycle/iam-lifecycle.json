@@ -1,0 +1,114 @@
+{
+  "comment": "IAM role lifecycle test: create -> update -> rename (replace)",
+  "initial": {
+    "name": "test-iam-lifecycle",
+    "terraform_json": {
+      "terraform": {
+        "required_providers": {
+          "aws": {
+            "source": "hashicorp/aws",
+            "version": "6.0.0"
+          },
+          "random": {
+            "source": "hashicorp/random",
+            "version": "3.6.0"
+          }
+        }
+      },
+      "resource": {
+        "random_string": {
+          "role_suffix": {
+            "length": 8,
+            "special": false,
+            "upper": false
+          }
+        },
+        "aws_iam_role": {
+          "test": {
+            "name": "test-role-${random_string.role_suffix.result}",
+            "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+            "description": "Test role for lifecycle testing",
+            "tags": {
+              "Environment": "test"
+            }
+          }
+        }
+      }
+    }
+  },
+  "update_description": {
+    "name": "test-iam-lifecycle",
+    "terraform_json": {
+      "terraform": {
+        "required_providers": {
+          "aws": {
+            "source": "hashicorp/aws",
+            "version": "6.0.0"
+          },
+          "random": {
+            "source": "hashicorp/random",
+            "version": "3.6.0"
+          }
+        }
+      },
+      "resource": {
+        "random_string": {
+          "role_suffix": {
+            "length": 8,
+            "special": false,
+            "upper": false
+          }
+        },
+        "aws_iam_role": {
+          "test": {
+            "name": "test-role-${random_string.role_suffix.result}",
+            "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+            "description": "Updated test role with new description",
+            "max_session_duration": 7200,
+            "tags": {
+              "Environment": "test",
+              "Updated": "true"
+            }
+          }
+        }
+      }
+    }
+  },
+  "rename_role": {
+    "name": "test-iam-lifecycle",
+    "terraform_json": {
+      "terraform": {
+        "required_providers": {
+          "aws": {
+            "source": "hashicorp/aws",
+            "version": "6.0.0"
+          },
+          "random": {
+            "source": "hashicorp/random",
+            "version": "3.6.0"
+          }
+        }
+      },
+      "resource": {
+        "random_string": {
+          "role_suffix": {
+            "length": 8,
+            "special": false,
+            "upper": false
+          }
+        },
+        "aws_iam_role": {
+          "test": {
+            "name": "renamed-test-role-${random_string.role_suffix.result}",
+            "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+            "description": "Renamed test role",
+            "tags": {
+              "Environment": "test",
+              "Renamed": "true"
+            }
+          }
+        }
+      }
+    }
+  }
+}

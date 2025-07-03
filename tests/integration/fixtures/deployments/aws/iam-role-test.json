@@ -1,0 +1,16 @@
+{
+  "resource": {
+    "aws_iam_role": {
+      "test_role": {
+        "name": "lattiam-test-role",
+        "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+        "path": "/",
+        "description": "Test role for Lattiam CLI",
+        "tags": {
+          "Test": "true",
+          "ManagedBy": "lattiam-test"
+        }
+      }
+    }
+  }
+}

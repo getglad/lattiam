@@ -1,0 +1,241 @@
+# Lattiam Project golangci-lint Configuration
+# Production-grade linting for a Terraform-compatible infrastructure API/CLI tool
+# Updated: June 2025
+
+run:
+  # The Go version your project is targeting. Should match your go.mod file.
+  go: "1.22"
+  # Timeout for analysis. 5m is a good default for larger projects.
+  timeout: 5m
+
+linters:
+  # Using an explicit allow-list of linters provides control and performance.
+  disable-all: true
+  enable:
+    # --- Core & Essential Linters ---
+    - errcheck # Ensures errors are checked.
+    - govet # Reports suspicious language constructs.
+    - staticcheck # A massive suite of static analysis checks for bugs, performance, and correctness.
+    - unused # Checks for unused code. (Largely covered by staticcheck, but good to have).
+    - ineffassign # Detects ineffectual variable assignments.
+
+    # --- Security Linters ---
+    - gosec # Go security scanner. Finds common vulnerabilities.
+    - depguard # Supply chain security. Enforces an allow-list for dependencies.
+    - bodyclose # Ensures HTTP response bodies are closed to prevent resource leaks.
+    - sqlclosecheck # Ensures sql.Rows and sql.Stmt are closed.
+
+    # --- Code Style & Formatting ---
+    - gofumpt # A stricter, more opinionated formatter than gofmt. The modern standard.
+    - goimports # Organizes imports automatically.
+    - revive # Fast, configurable, and extensible replacement for the deprecated golint.
+    - goconst # Finds repeated strings that could be constants.
+
+    # --- Complexity & Maintainability ---
+    - gocyclo # Checks cyclomatic complexity of functions.
+    - gocognit # Measures cognitive complexity (how hard code is to understand).
+    - funlen # Checks function length to promote smaller, focused functions.
+    - dupl # Finds duplicated code blocks to reduce technical debt.
+
+    # --- Testing Best Practices ---
+    - paralleltest # Enforces t.Parallel() calls to speed up tests.
+    - testifylint # Checks for common issues when using the 'testify' suite.
+
+    # --- Other Best Practices ---
+    - errorlint # Finds issues with error handling and wrapping.
+    - wrapcheck # Checks that errors are wrapped correctly using modern patterns.
+    - whitespace # Detects trailing whitespace.
+    - nolintlint # Ensures nolint directives are specific and explained.
+    - gocritic # Highly opinionated linter with 180+ checks.
+    - misspell # Catches common spelling mistakes in code and comments.
+    - nilerr # Finds code that returns nil even though it checks for error.
+    - thelper # Ensures test helpers call t.Helper().
+    - exhaustive # Checks exhaustiveness of enum switch statements.
+    - forbidigo # Prevents specific function patterns (e.g., fmt.Print in production).
+    - prealloc # Suggests preallocations for performance.
+    - unconvert # Removes unnecessary type conversions.
+    - musttag # Ensures required struct tags are present (json, yaml, etc.).
+
+linters-settings:
+  # --- Formatting ---
+  goimports:
+    # Group lattiam internal packages separately from third-party imports
+    local-prefixes: github.com/lattiam/lattiam
+
+  # --- Complexity ---
+  # Stricter limits suitable for a new project.
+  gocyclo:
+    min-complexity: 15
+  gocognit:
+    min-complexity: 20 # Lower is stricter. Flags functions that are hard to understand.
+  funlen:
+    lines: 80
+    statements: 50
+
+  # --- Duplication ---
+  dupl:
+    # Threshold for the size of duplicated code fragment in AST nodes.
+    # 150 is a good starting point to find significant duplication without too much noise.
+    threshold: 150
+
+  # --- Security ---
+  gosec:
+    excludes:
+      - G101 # Hardcoded credentials - often false positives in tests
+      - G404 # Weak random OK for tests
+      - G501 # Blocklisted import crypto/md5 - needed for Terraform functions
+      - G505 # Blocklisted import crypto/sha1 - needed for Terraform functions
+      - G306 # File permissions - test files don't need 0600
+      - G115 # Integer overflow - false positive for uint64 conversion
+  depguard:
+    rules:
+      main:
+        allow:
+          - $gostd # Allow all standard library packages.
+          - github.com/lattiam/lattiam # Our own project's packages
+          # AWS SDK v2
+          - github.com/aws/aws-sdk-go-v2
+          # Web framework
+          - github.com/go-chi/chi/v5
+          # Testing
+          - github.com/stretchr/testify
+          # Terraform integration
+          - github.com/hashicorp/terraform-plugin-go
+          - github.com/hashicorp/hcl/v2
+          - github.com/hashicorp/go-uuid
+          - github.com/zclconf/go-cty
+          # CLI framework
+          - github.com/spf13/cobra
+          # Graph algorithms for dependency resolution
+          - github.com/dominikbraun/graph
+          # gRPC for provider protocol
+          - google.golang.org/grpc
+          - google.golang.org/protobuf
+          # MessagePack for Terraform protocol
+          - github.com/vmihailenco/msgpack/v5
+
+  # --- Testing ---
+  paralleltest:
+    # Enforce that all eligible subtests call t.Parallel().
+    # The linter automatically detects and skips tests that use:
+    # - t.Setenv() - modifies process environment
+    # - t.TempDir() - uses shared temp directory counter
+    # - t.Chdir() - changes working directory
+    ignore-missing: false
+    # Only check subtests (t.Run) for t.Parallel(), not top-level Test functions.
+    ignore-top-level: true
+    # For tests that can't be parallel for other reasons (global state, etc.),
+    # add this comment directly above the test:
+    #   //paralleltest:disable
+    # For patterns, you can add regex here:
+    # skip-tests:
+    #   - "^TestSequential_.*"
+  
+  # --- Additional Linters ---
+  gocritic:
+    # Enable most checks, disable overly strict ones
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+      - experimental
+      - opinionated
+    disabled-checks:
+      - hugeParam # Can be too aggressive about parameter size
+      - rangeValCopy # Sometimes copying is intentional  
+      - commentedOutCode # False positives with example code
+      - whyNoLint # We use nolintlint for this
+      - paramTypeCombine # Sometimes separate params are clearer
+  
+  forbidigo:
+    # Forbid direct fmt.Print* in production code (should use logger)
+    forbid:
+      - fmt\.Print.*
+      - panic\(.*\) # Prefer returning errors
+    # Allow in tests
+    exclude-godoc-examples: true
+    analyze-types: true
+  
+  nolintlint:
+    # Require explanation for nolint directives
+    require-explanation: true
+    require-specific: true
+  
+  exhaustive:
+    # Check switch statements on enums
+    check-generated: false
+    default-signifies-exhaustive: true
+  
+  misspell:
+    # US English by default
+    locale: US
+    
+  prealloc:
+    # Don't be too aggressive
+    simple: true
+    range-loops: true
+    for-loops: false
+  
+  musttag:
+    # Ensure JSON tags on exported structs used for API/state
+    functions:
+      - name: json.Marshal
+        tag: json
+      - name: json.MarshalIndent
+        tag: json
+      - name: json.Unmarshal
+        tag: json
+
+issues:
+  # Exclude directories from analysis
+  exclude-dirs:
+    - clones  # Third-party source code clones for reference
+    - tmp     # Temporary debug output
+    
+  # Exclude specific linters from running on test files where they are less relevant.
+  exclude-rules:
+    - path: _test\.go$
+      linters:
+        - funlen # Test functions can sometimes be long and that's okay.
+        - goconst # Repetitive strings are common in test case names and data.
+        - dupl # Test cases often have similar structure
+        - forbidigo # fmt.Print is OK in tests
+        - nilerr # Sometimes we intentionally return nil in test error paths
+        - gocritic # Tests can be more lenient
+    
+    # Proto-generated files should be excluded from most checks
+    - path: internal/proto/
+      linters:
+        - revive
+        - goconst
+        - funlen
+        - gocyclo
+        - gocognit
+    
+    # Example and demo files can be more lenient
+    - path: (examples|demo)/
+      linters:
+        - goconst
+        - dupl
+        - forbidigo
+        - exhaustive
+    
+    # CLI commands can use fmt for output
+    - path: cmd/.*\.go$
+      linters:
+        - forbidigo # CLI tools need to print output
+    
+    # Main packages might have different rules
+    - path: main\.go$
+      linters:
+        - forbidigo # Main might need fmt.Print for CLI output
+
+  max-issues-per-linter: 50
+  max-same-issues: 10
+  
+  # Exclude some well-known issues that are acceptable
+  exclude:
+    # err113: do not define dynamic errors is too strict for CLI tools
+    - "do not define dynamic errors, use wrapped static errors instead"
+    # Ignore missing comments on exported items in internal packages
+    - "exported .* should have comment"

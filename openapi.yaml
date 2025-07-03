@@ -1,0 +1,512 @@
+openapi: 3.0.3
+info:
+  title: Lattiam API
+  description: REST API for Terraform JSON infrastructure automation
+  version: 0.1.0
+  contact:
+    name: Lattiam Project
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: http://localhost:8084/api/v1
+    description: Local development server
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Check API server health and LocalStack connectivity
+      operationId: getHealth
+      tags:
+        - System
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /deployments:
+    get:
+      summary: List deployments
+      description: Get all deployments with optional detailed view
+      operationId: listDeployments
+      tags:
+        - Deployments
+      parameters:
+        - name: detailed
+          in: query
+          description: Return detailed information including resources
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of deployments
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/DeploymentResponse'
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/EnhancedDeploymentResponse'
+    
+    post:
+      summary: Create deployment
+      description: Create a new infrastructure deployment from Terraform JSON
+      operationId: createDeployment
+      tags:
+        - Deployments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeploymentRequest'
+      responses:
+        '201':
+          description: Deployment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnhancedDeploymentResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /deployments/{id}:
+    get:
+      summary: Get deployment
+      description: Get detailed information about a specific deployment
+      operationId: getDeployment
+      tags:
+        - Deployments
+      parameters:
+        - name: id
+          in: path
+          description: Deployment ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deployment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnhancedDeploymentResponse'
+        '404':
+          description: Deployment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    
+    put:
+      summary: Update deployment
+      description: Update deployment name, configuration, or resources
+      operationId: updateDeployment
+      tags:
+        - Deployments
+      parameters:
+        - name: id
+          in: path
+          description: Deployment ID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeploymentRequest'
+      responses:
+        '200':
+          description: Deployment updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnhancedDeploymentResponse'
+        '404':
+          description: Deployment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Operation not allowed in current state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    
+    delete:
+      summary: Delete deployment
+      description: Destroy resources and remove deployment
+      operationId: deleteDeployment
+      tags:
+        - Deployments
+      parameters:
+        - name: id
+          in: path
+          description: Deployment ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deployment deletion initiated
+        '404':
+          description: Deployment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /deployments/{id}/plan:
+    post:
+      summary: Plan deployment changes
+      description: Generate a plan showing what changes would be made to a deployment
+      operationId: planDeployment
+      tags:
+        - Deployments
+      parameters:
+        - name: id
+          in: path
+          description: Deployment ID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanRequest'
+      responses:
+        '200':
+          description: Plan generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanResponse'
+        '404':
+          description: Deployment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Operation not allowed in current state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - version
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+          example: healthy
+        timestamp:
+          type: string
+          format: date-time
+          example: '2024-01-15T10:30:00Z'
+        version:
+          type: string
+          example: '0.1.0'
+        localstack:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [healthy, unhealthy, error, not_applicable]
+            message:
+              type: string
+            code:
+              type: integer
+
+    DeploymentRequest:
+      type: object
+      required:
+        - name
+        - terraform_json
+      properties:
+        name:
+          type: string
+          description: Human-readable name for the deployment
+          example: my-deployment
+        terraform_json:
+          type: object
+          description: Standard Terraform JSON configuration
+          example:
+            resource:
+              aws_s3_bucket:
+                my_bucket:
+                  bucket: my-unique-bucket-name
+        config:
+          $ref: '#/components/schemas/DeploymentConfig'
+
+    DeploymentConfig:
+      type: object
+      properties:
+        aws_profile:
+          type: string
+          description: AWS profile to use for authentication
+          example: default
+        aws_region:
+          type: string
+          description: AWS region for resources
+          example: us-east-1
+
+    DeploymentResponse:
+      type: object
+      required:
+        - id
+        - name
+        - status
+      properties:
+        id:
+          type: string
+          description: Unique deployment identifier
+          example: dep-1234567890-1
+        name:
+          type: string
+          description: Human-readable deployment name
+          example: my-deployment
+        status:
+          $ref: '#/components/schemas/DeploymentStatus'
+        error:
+          type: string
+          description: Error message if deployment failed
+
+    EnhancedDeploymentResponse:
+      allOf:
+        - $ref: '#/components/schemas/DeploymentResponse'
+        - type: object
+          properties:
+            resources:
+              type: array
+              items:
+                $ref: '#/components/schemas/ResourceStatus'
+            resource_count:
+              type: integer
+              description: Total number of resources
+              example: 3
+            success_count:
+              type: integer
+              description: Number of successfully deployed resources
+              example: 2
+            error_count:
+              type: integer
+              description: Number of failed resources
+              example: 1
+            metadata:
+              type: object
+              description: Additional deployment metadata
+              properties:
+                provider_versions:
+                  type: object
+                  additionalProperties:
+                    type: string
+                environment:
+                  type: object
+            created_at:
+              type: string
+              format: date-time
+              example: '2024-01-15T10:00:00Z'
+            updated_at:
+              type: string
+              format: date-time
+              example: '2024-01-15T10:01:00Z'
+
+    ResourceStatus:
+      type: object
+      required:
+        - type
+        - name
+        - status
+      properties:
+        type:
+          type: string
+          description: Terraform resource type
+          example: aws_s3_bucket
+        name:
+          type: string
+          description: Resource instance name
+          example: my_bucket
+        status:
+          type: string
+          enum: [pending, creating, created, failed, destroying, destroyed]
+        error:
+          type: string
+          description: Error message if resource operation failed
+        state:
+          type: object
+          description: Current state of the resource
+          additionalProperties: true
+
+    PlanRequest:
+      type: object
+      properties:
+        terraform_json:
+          type: object
+          description: New Terraform JSON configuration to plan against
+          example:
+            resource:
+              aws_s3_bucket:
+                updated_bucket:
+                  bucket: my-updated-bucket
+
+    PlanResponse:
+      type: object
+      required:
+        - deployment_id
+        - plan
+        - created_at
+      properties:
+        deployment_id:
+          type: string
+          description: ID of the deployment being planned
+          example: dep-1234567890-1
+        plan:
+          $ref: '#/components/schemas/DeploymentPlan'
+        created_at:
+          type: string
+          format: date-time
+          example: '2024-01-15T10:30:00Z'
+
+    DeploymentPlan:
+      type: object
+      required:
+        - deployment_id
+        - current_status
+        - resource_plans
+        - summary
+      properties:
+        deployment_id:
+          type: string
+          example: dep-1234567890-1
+        current_status:
+          type: string
+          description: Current deployment status
+          example: completed
+        resource_plans:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResourcePlan'
+        summary:
+          $ref: '#/components/schemas/PlanSummary'
+
+    ResourcePlan:
+      type: object
+      required:
+        - type
+        - name
+        - action
+      properties:
+        type:
+          type: string
+          description: Terraform resource type
+          example: aws_s3_bucket
+        name:
+          type: string
+          description: Resource instance name
+          example: my_bucket
+        action:
+          type: string
+          enum: [create, update, destroy]
+          description: Planned action for this resource
+        current_state:
+          type: object
+          description: Current state of the resource (if exists)
+          additionalProperties: true
+        proposed_state:
+          type: object
+          description: Proposed state after applying changes
+          additionalProperties: true
+
+    PlanSummary:
+      type: object
+      required:
+        - create
+        - update
+        - destroy
+        - total
+      properties:
+        create:
+          type: integer
+          description: Number of resources to create
+          example: 1
+        update:
+          type: integer
+          description: Number of resources to update
+          example: 0
+        destroy:
+          type: integer
+          description: Number of resources to destroy
+          example: 0
+        total:
+          type: integer
+          description: Total number of planned changes
+          example: 1
+
+    DeploymentStatus:
+      type: string
+      enum:
+        - pending
+        - planning
+        - applying
+        - completed
+        - failed
+        - destroying
+        - destroyed
+      description: |
+        Deployment lifecycle status:
+        - `pending`: Deployment created but not started
+        - `planning`: Planning resource changes
+        - `applying`: Creating/updating resources
+        - `completed`: All resources deployed successfully
+        - `failed`: Deployment failed
+        - `destroying`: Destroying resources
+        - `destroyed`: All resources destroyed
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+          example: not_found
+        message:
+          type: string
+          description: Human-readable error message
+          example: Deployment not found
+
+tags:
+  - name: System
+    description: System health and status endpoints
+  - name: Deployments
+    description: Infrastructure deployment management

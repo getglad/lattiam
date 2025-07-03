@@ -1,0 +1,6 @@
+{
+  "name": "empty-deployment",
+  "terraform_json": {
+    "resource": {}
+  }
+}

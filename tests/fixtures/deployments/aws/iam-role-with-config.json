@@ -1,0 +1,23 @@
+{
+  "name": "iam-role-with-config",
+  "config": {
+    "aws_profile": "default",
+    "aws_region": "us-east-1"
+  },
+  "terraform_json": {
+    "resource": {
+      "aws_iam_role": {
+        "lambda_exec": {
+          "name": "lambda-execution-role",
+          "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+          "path": "/",
+          "description": "Lambda execution role with AWS config",
+          "tags": {
+            "Environment": "test",
+            "ManagedBy": "lattiam"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "demo-simple-function",
+  "terraform_json": {
+    "terraform": {
+      "required_providers": {
+        "random": {
+          "source": "hashicorp/random",
+          "version": "~> 3.6"
+        }
+      }
+    },
+    "resource": {
+      "random_id": {
+        "test": {
+          "byte_length": 8,
+          "prefix": "${uuid()}"
+        }
+      }
+    }
+  }
+}

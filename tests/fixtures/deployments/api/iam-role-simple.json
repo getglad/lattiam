@@ -1,0 +1,19 @@
+{
+  "name": "simple-iam-role",
+  "terraform_json": {
+    "resource": {
+      "aws_iam_role": {
+        "lambda_exec": {
+          "name": "simple-lambda-execution-role",
+          "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+          "path": "/",
+          "description": "Simple Lambda execution role created via API",
+          "tags": {
+            "Environment": "test",
+            "ManagedBy": "lattiam-api"
+          }
+        }
+      }
+    }
+  }
+}

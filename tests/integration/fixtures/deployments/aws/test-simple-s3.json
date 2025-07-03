@@ -1,0 +1,27 @@
+{
+  "name": "test-simple-s3",
+  "terraform_json": {
+    "terraform": {
+      "required_providers": {
+        "random": {
+          "source": "hashicorp/random",
+          "version": "3.6.0"
+        }
+      }
+    },
+    "resource": {
+      "random_string": {
+        "bucket_suffix": {
+          "length": 8,
+          "special": false,
+          "upper": false
+        }
+      },
+      "aws_s3_bucket": {
+        "test": {
+          "bucket": "lattiam-test-bucket-${random_string.bucket_suffix.result}"
+        }
+      }
+    }
+  }
+}

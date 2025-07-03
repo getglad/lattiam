@@ -1,0 +1,101 @@
+{
+  "// NOTE": "This example shows the Terraform JSON format for creating an EC2 instance with SSM Session Manager access",
+  "// IMPORTANT": "The API currently only supports one resource per deployment, so these would need to be deployed separately",
+  
+  "// Step 1": "Deploy IAM Role",
+  "iam_role_deployment": {
+    "resource": {
+      "aws_iam_role": {
+        "ec2_ssm_role": {
+          "name": "ec2-ssm-role",
+          "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ec2.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+          "description": "IAM role for EC2 instance to access SSM Session Manager",
+          "path": "/",
+          "managed_policy_arns": [
+            "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+          ],
+          "tags": {
+            "Service": "ec2",
+            "Purpose": "ssm-access",
+            "ManagedBy": "lattiam"
+          }
+        }
+      }
+    }
+  },
+  
+  "// Step 2": "Deploy Instance Profile",
+  "instance_profile_deployment": {
+    "resource": {
+      "aws_iam_instance_profile": {
+        "ec2_ssm_profile": {
+          "name": "ec2-ssm-instance-profile",
+          "role": "ec2-ssm-role"
+        }
+      }
+    }
+  },
+  
+  "// Step 3": "Deploy Security Group",
+  "security_group_deployment": {
+    "resource": {
+      "aws_security_group": {
+        "ec2_ssm_sg": {
+          "name": "ec2-ssm-security-group",
+          "description": "Security group for EC2 instance with SSM Session Manager access",
+          "vpc_id": "vpc-12345678",
+          "egress": [
+            {
+              "description": "HTTPS to AWS SSM endpoints",
+              "from_port": 443,
+              "to_port": 443,
+              "protocol": "tcp",
+              "cidr_blocks": ["0.0.0.0/0"]
+            },
+            {
+              "description": "HTTP for package updates",
+              "from_port": 80,
+              "to_port": 80,
+              "protocol": "tcp",
+              "cidr_blocks": ["0.0.0.0/0"]
+            }
+          ],
+          "tags": {
+            "Name": "ec2-ssm-security-group",
+            "Purpose": "ssm-access",
+            "ManagedBy": "lattiam"
+          }
+        }
+      }
+    }
+  },
+  
+  "// Step 4": "Deploy EC2 Instance",
+  "ec2_instance_deployment": {
+    "resource": {
+      "aws_instance": {
+        "ec2_ssm_instance": {
+          "ami": "ami-0c55b159cbfafe1f0",
+          "instance_type": "t3.micro",
+          "iam_instance_profile": "ec2-ssm-instance-profile",
+          "vpc_security_group_ids": ["${aws_security_group.ec2_ssm_sg.id}"],
+          "subnet_id": "subnet-12345678",
+          "associate_public_ip_address": false,
+          "root_block_device": {
+            "volume_type": "gp3",
+            "volume_size": 20,
+            "encrypted": true,
+            "delete_on_termination": true
+          },
+          "user_data": "#!/bin/bash\nyum update -y\n\n# Ensure SSM agent is running\nsystemctl enable amazon-ssm-agent\nsystemctl start amazon-ssm-agent\n\n# Install additional tools\nyum install -y htop",
+          "tags": {
+            "Name": "ec2-ssm-instance",
+            "Purpose": "ssm-demo",
+            "SSMEnabled": "true",
+            "ManagedBy": "lattiam"
+          }
+        }
+      }
+    }
+  }
+}

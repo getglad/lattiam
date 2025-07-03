@@ -1,0 +1,38 @@
+{
+  "name": "test-terraform-functions",
+  "terraform_json": {
+    "terraform": {
+      "required_providers": {
+        "random": {
+          "source": "hashicorp/random",
+          "version": "3.6.0"
+        }
+      }
+    },
+    "resource": {
+      "random_string": {
+        "test_uuid": {
+          "length": 36,
+          "special": false,
+          "keepers": {
+            "uuid_value": "${uuid()}"
+          }
+        },
+        "test_timestamp": {
+          "length": 20,
+          "special": false,
+          "keepers": {
+            "timestamp_value": "${timestamp()}"
+          }
+        },
+        "test_functions": {
+          "length": 10,
+          "special": false,
+          "keepers": {
+            "function_result": "${upper(\"hello\")}-${lower(\"WORLD\")}"
+          }
+        }
+      }
+    }
+  }
+}

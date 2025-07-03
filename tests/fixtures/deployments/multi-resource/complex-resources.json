@@ -1,0 +1,30 @@
+{
+  "resource": {
+    "aws_instance": {
+      "complex_test": {
+        "ami": "ami-12345678",
+        "instance_type": "t2.micro",
+        "associate_public_ip_address": true,
+        "monitoring": false,
+        "cpu_core_count": 2,
+        "cpu_threads_per_core": 2,
+        "security_groups": [
+          "sg-12345678",
+          "sg-87654321"
+        ],
+        "root_block_device": {
+          "volume_type": "gp3",
+          "volume_size": 100,
+          "encrypted": true,
+          "delete_on_termination": true
+        },
+        "tags": {
+          "Name": "complex-instance",
+          "Environment": "test",
+          "Application": "lattiam-oat"
+        },
+        "user_data": "#!/bin/bash\necho \"Hello from Lattiam\"\nyum update -y"
+      }
+    }
+  }
+}

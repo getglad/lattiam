@@ -1,0 +1,59 @@
+{
+  "name": "terraform-functions-demo",
+  "terraform_json": {
+    "terraform": {
+      "required_providers": {
+        "random": {
+          "source": "hashicorp/random",
+          "version": "3.6.0"
+        }
+      }
+    },
+    "resource": {
+      "random_string": {
+        "example_uuid": {
+          "length": 36,
+          "special": false,
+          "keepers": {
+            "uuid": "${uuid()}"
+          }
+        },
+        "example_timestamp": {
+          "length": 20,
+          "special": false,
+          "keepers": {
+            "created_at": "${timestamp()}"
+          }
+        },
+        "example_string_functions": {
+          "length": 10,
+          "special": false,
+          "keepers": {
+            "upper_test": "${upper(\"hello world\")}",
+            "lower_test": "${lower(\"HELLO WORLD\")}",
+            "format_test": "${format(\"Hello %s!\", \"Lattiam\")}",
+            "base64_test": "${base64encode(\"Lattiam rocks!\")}"
+          }
+        },
+        "example_hash_functions": {
+          "length": 8,
+          "special": false,
+          "keepers": {
+            "md5_hash": "${md5(\"Lattiam\")}",
+            "sha256_hash": "${sha256(\"Lattiam\")}"
+          }
+        },
+        "example_math_functions": {
+          "length": 5,
+          "special": false,
+          "keepers": {
+            "max_value": "${max(10, 25, 15)}",
+            "min_value": "${min(10, 25, 15)}",
+            "abs_value": "${abs(-42)}",
+            "ceil_value": "${ceil(3.14)}"
+          }
+        }
+      }
+    }
+  }
+}

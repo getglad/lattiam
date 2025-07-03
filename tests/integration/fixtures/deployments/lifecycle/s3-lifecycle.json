@@ -1,0 +1,114 @@
+{
+  "comment": "S3 bucket lifecycle test: create -> update tags -> rename (replace)",
+  "initial": {
+    "name": "test-s3-lifecycle",
+    "terraform_json": {
+      "terraform": {
+        "required_providers": {
+          "aws": {
+            "source": "hashicorp/aws",
+            "version": "6.0.0"
+          },
+          "random": {
+            "source": "hashicorp/random",
+            "version": "3.6.0"
+          }
+        }
+      },
+      "resource": {
+        "random_string": {
+          "bucket_suffix": {
+            "length": 8,
+            "special": false,
+            "upper": false
+          }
+        },
+        "aws_s3_bucket": {
+          "test": {
+            "bucket": "test-bucket-${random_string.bucket_suffix.result}",
+            "tags": {
+              "Environment": "test",
+              "ManagedBy": "lattiam"
+            },
+            "timeouts": {}
+          }
+        }
+      }
+    }
+  },
+  "update_tags": {
+    "name": "test-s3-lifecycle",
+    "terraform_json": {
+      "terraform": {
+        "required_providers": {
+          "aws": {
+            "source": "hashicorp/aws",
+            "version": "6.0.0"
+          },
+          "random": {
+            "source": "hashicorp/random",
+            "version": "3.6.0"
+          }
+        }
+      },
+      "resource": {
+        "random_string": {
+          "bucket_suffix": {
+            "length": 8,
+            "special": false,
+            "upper": false
+          }
+        },
+        "aws_s3_bucket": {
+          "test": {
+            "bucket": "test-bucket-${random_string.bucket_suffix.result}",
+            "tags": {
+              "Environment": "test",
+              "ManagedBy": "lattiam",
+              "Updated": "true",
+              "Version": "2.0"
+            },
+            "timeouts": {}
+          }
+        }
+      }
+    }
+  },
+  "rename_bucket": {
+    "name": "test-s3-lifecycle",
+    "terraform_json": {
+      "terraform": {
+        "required_providers": {
+          "aws": {
+            "source": "hashicorp/aws",
+            "version": "6.0.0"
+          },
+          "random": {
+            "source": "hashicorp/random",
+            "version": "3.6.0"
+          }
+        }
+      },
+      "resource": {
+        "random_string": {
+          "bucket_suffix": {
+            "length": 8,
+            "special": false,
+            "upper": false
+          }
+        },
+        "aws_s3_bucket": {
+          "test": {
+            "bucket": "renamed-bucket-${random_string.bucket_suffix.result}",
+            "tags": {
+              "Environment": "test",
+              "ManagedBy": "lattiam",
+              "Renamed": "true"
+            },
+            "timeouts": {}
+          }
+        }
+      }
+    }
+  }
+}

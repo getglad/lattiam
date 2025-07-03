@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  localstack:
+    container_name: lattiam-localstack
+    image: localstack/localstack:3.0
+    ports:
+      - "4566:4566"            # LocalStack Gateway
+      - "4510-4559:4510-4559"  # External services port range
+    environment:
+      # Core LocalStack configuration
+      - DEBUG=1
+      - PERSISTENCE=0
+      - LAMBDA_EXECUTOR=docker
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      
+      # AWS Services to enable
+      - SERVICES=iam,sts,s3,lambda,cloudformation,logs,events,ec2
+      
+      # Security and access
+      - DISABLE_CORS_CHECKS=1
+      - SKIP_SSL_CERT_DOWNLOAD=1
+      
+      # Performance and behavior
+      - LAMBDA_REMOVE_CONTAINERS=true
+      - LAMBDA_DOCKER_NETWORK=bridge
+      
+      # LocalStack Pro features (set to 0 for community edition)
+      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN:-}
+      
+    volumes:
+      - "${TMPDIR:-/tmp}/localstack:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Test initialization service
+  localstack-init:
+    container_name: lattiam-localstack-init
+    image: amazon/aws-cli:2.13.25
+    depends_on:
+      localstack:
+        condition: service_healthy
+    environment:
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - LATTIAM_API_SERVER_URL=http://host.docker.internal:8084
+    volumes:
+      - ./init-scripts:/scripts:ro
+    command: |
+      sh -c "
+        echo 'Waiting for LocalStack to be ready...'
+        sleep 5
+        
+        echo 'Creating test IAM resources...'
+        
+        # Create a test user for integration tests
+        aws iam create-user --user-name lattiam-test-user --path /test/ || echo 'User already exists'
+        
+        # Create a test group
+        aws iam create-group --group-name lattiam-test-group --path /test/ || echo 'Group already exists'
+        
+        # Create a test policy
+        aws iam create-policy --policy-name lattiam-test-policy --path /test/ --policy-document '{
+          \"Version\": \"2012-10-17\",
+          \"Statement\": [
+            {
+              \"Effect\": \"Allow\",
+              \"Action\": \"s3:GetObject\",
+              \"Resource\": \"*\"
+            }
+          ]
+        }' || echo 'Policy already exists'
+        
+        echo 'LocalStack initialization complete!'
+      "
+
+networks:
+  default:
+    name: lattiam-test-network

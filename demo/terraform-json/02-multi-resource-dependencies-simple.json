@@ -1,0 +1,52 @@
+{
+  "name": "demo-app-stack-simple",
+  "terraform_json": {
+    "terraform": {
+      "required_providers": {
+        "random": {
+          "source": "hashicorp/random",
+          "version": "3.6.0"
+        },
+        "aws": {
+          "source": "hashicorp/aws",
+          "version": "5.81.0"
+        }
+      }
+    },
+    "provider": {
+      "aws": {
+        "access_key": "test",
+        "secret_key": "test",
+        "region": "us-east-1",
+        "s3_use_path_style": true,
+        "skip_credentials_validation": true,
+        "skip_metadata_api_check": true,
+        "skip_requesting_account_id": true,
+        "endpoints": {
+          "s3": "http://localstack:4566",
+          "iam": "http://localstack:4566",
+          "sts": "http://localstack:4566"
+        }
+      }
+    },
+    "resource": {
+      "random_string": {
+        "stack_suffix": {
+          "length": 8,
+          "special": false,
+          "upper": false
+        }
+      },
+      "aws_s3_bucket": {
+        "app_data": {
+          "bucket": "lattiam-app-data-${random_string.stack_suffix.result}",
+          "timeouts": {}
+        },
+        "app_logs": {
+          "bucket": "lattiam-app-logs-${random_string.stack_suffix.result}",
+          "timeouts": {}
+        }
+      }
+    }
+  }
+}

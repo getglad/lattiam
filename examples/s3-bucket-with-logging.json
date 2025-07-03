@@ -1,0 +1,44 @@
+{
+  "name": "s3-bucket-with-logging",
+  "terraform_json": {
+    "terraform": {
+      "required_providers": {
+        "aws": {
+          "source": "hashicorp/aws",
+          "version": "6.0.0"
+        }
+      }
+    },
+    "provider": {
+      "aws": {
+        "profile": "developer",
+        "region": "us-east-1"
+      }
+    },
+    "resource": {
+      "aws_s3_bucket": {
+        "example_bucket": {
+          "bucket": "lattiam-example-bucket-logging-${formatdate(\"YYYYMMDD-HHmmss\", timestamp())}",
+          "tags": {
+            "Name": "My bucket",
+            "Environment": "Dev",
+            "ManagedBy": "Lattiam"
+          },
+          "timeouts": {}
+        }
+      },
+      "aws_s3_bucket_logging": {
+        "example_bucket_logging": {
+          "bucket": "${aws_s3_bucket.example_bucket.id}",
+          "target_bucket": "${aws_s3_bucket.example_bucket.id}",
+          "target_prefix": "log/",
+          "timeouts": {}
+        }
+      }
+    }
+  },
+  "config": {
+    "aws_region": "us-east-1",
+    "aws_profile": "developer"
+  }
+}

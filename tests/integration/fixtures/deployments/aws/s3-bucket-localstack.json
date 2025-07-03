@@ -1,0 +1,17 @@
+{
+  "name": "s3-bucket-for-localstack",
+  "terraform_json": {
+    "resource": {
+      "aws_s3_bucket": {
+        "localstack_test": {
+          "bucket": "localstack-test-bucket",
+          "force_destroy": true,
+          "tags": {
+            "Environment": "localstack",
+            "Purpose": "integration-testing"
+          }
+        }
+      }
+    }
+  }
+}
