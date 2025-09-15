@@ -1,0 +1,90 @@
+{
+  "name": "demo-terraform-functions",
+  "terraform_json": {
+    "provider": {
+      "aws": {
+        "region": "us-east-1",
+        "access_key": "test",
+        "secret_key": "test",
+        "skip_credentials_validation": true,
+        "skip_requesting_account_id": true,
+        "skip_metadata_api_check": true,
+        "s3_use_path_style": true,
+        "endpoints": {
+          "s3": "http://localstack:4566",
+          "sts": "http://localstack:4566",
+          "iam": "http://localstack:4566"
+        }
+      },
+      "random": {
+        "version": "3.6.0"
+      }
+    },
+    "resource": {
+      "random_string": {
+        "uuid_example": {
+          "length": 36,
+          "special": false,
+          "keepers": {
+            "unique_id": "${uuid()}",
+            "description": "Generated UUID for unique identification"
+          }
+        },
+        "timestamp_example": {
+          "length": 20,
+          "special": false,
+          "keepers": {
+            "created_at": "${timestamp()}",
+            "formatted_date": "${formatdate(\"YYYY-MM-DD hh:mm:ss\", timestamp())}",
+            "description": "Resource creation timestamp"
+          }
+        },
+        "string_functions": {
+          "length": 15,
+          "special": false,
+          "keepers": {
+            "upper_demo": "${upper(\"lattiam rocks\")}",
+            "lower_demo": "${lower(\"TERRAFORM API\")}",
+            "formatted": "${format(\"Hello %s from Lattiam!\", \"World\")}",
+            "base64_encoded": "${base64encode(\"Lattiam: API-driven infrastructure\")}",
+            "trimmed": "${trimspace(\"  spaces removed  \")}",
+            "replaced": "${replace(\"Hello-World\", \"-\", \" \")}",
+            "description": "String manipulation examples"
+          }
+        },
+        "hash_functions": {
+          "length": 10,
+          "special": false,
+          "keepers": {
+            "md5_example": "${md5(\"Lattiam-2025\")}",
+            "sha256_example": "${substr(sha256(\"Secure-Hash-Example\"), 0, 16)}",
+            "description": "Cryptographic hash examples"
+          }
+        },
+        "math_functions": {
+          "length": 8,
+          "special": false,
+          "keepers": {
+            "max_value": "${tostring(max(42, 17, 99, 3))}",
+            "min_value": "${tostring(min(42, 17, 99, 3))}",
+            "abs_negative": "${tostring(abs(-100))}",
+            "ceil_example": "${tostring(ceil(3.14159))}",
+            "floor_example": "${tostring(floor(9.99))}",
+            "description": "Mathematical function examples"
+          }
+        },
+        "collection_functions": {
+          "length": 12,
+          "special": false,
+          "keepers": {
+            "list_length": "${tostring(length([\"aws\", \"azure\", \"gcp\", \"alibaba\"]))}",
+            "joined": "${join(\"-\", [\"lattiam\", \"api\", \"v1\"])}",
+            "element_at": "${element([\"first\", \"second\", \"third\"], 1)}",
+            "contains_check": "${tostring(contains([\"dev\", \"staging\", \"prod\"], \"prod\"))}",
+            "description": "Collection manipulation examples"
+          }
+        }
+      }
+    }
+  }
+}

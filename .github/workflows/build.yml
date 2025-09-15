@@ -1,0 +1,51 @@
+name: Build Verification
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  GO_VERSION: '1.23'
+  GOCACHE: ${{ github.workspace }}/.cache/go-build
+  GOMODCACHE: ${{ github.workspace }}/.cache/go-mod
+  GOPROXY: https://proxy.golang.org,direct
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+        cache-dependency-path: go.sum
+
+    - name: Setup Go tools
+      uses: ./.github/actions/setup-tools
+      with:
+        tools: 'build'
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Install swag for documentation
+      run: go install github.com/swaggo/swag/cmd/swag@latest
+
+    - name: Generate Swagger documentation
+      run: swag init -g ./cmd/api-server/main.go -o ./docs
+
+    - name: Build all platforms
+      run: make build-all-platforms
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts-${{ github.sha }}
+        path: dist/
+        retention-days: 7

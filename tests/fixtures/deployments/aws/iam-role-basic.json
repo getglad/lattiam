@@ -1,0 +1,15 @@
+{
+  "resource": {
+    "aws_iam_role": {
+      "test_role": {
+        "name": "test-role",
+        "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+        "description": "Test role for OAT",
+        "tags": {
+          "Environment": "test",
+          "TestSuite": "lattiam-cli"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,104 @@
+name: 'Setup Go Tools'
+description: 'Install and cache Go development tools'
+inputs:
+  tools:
+    description: 'Comma-separated list of tools to install (lint,security,build,all)'
+    required: false
+    default: 'all'
+  go-version:
+    description: 'Go version'
+    required: false
+    default: '1.23'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Cache Go tools
+      uses: actions/cache@v4
+      id: tool-cache
+      with:
+        path: ~/go/bin
+        key: ${{ runner.os }}-go-tools-${{ inputs.go-version }}-${{ inputs.tools }}-${{ hashFiles('go.mod', '.golangci.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-go-tools-${{ inputs.go-version }}-${{ inputs.tools }}-
+          ${{ runner.os }}-go-tools-${{ inputs.go-version }}-
+          ${{ runner.os }}-go-tools-
+
+    - name: Report cache status
+      shell: bash
+      run: |
+        if [ "${{ steps.tool-cache.outputs.cache-hit }}" == "true" ]; then
+          echo "✅ Using cached Go tools - installation skipped"
+        else
+          echo "⏳ Cache miss - installing tools for: ${{ inputs.tools }}"
+        fi
+
+    - name: Install Go tools
+      if: steps.tool-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        echo "Installing Go tools..."
+        start_time=$(date +%s)
+        
+        # Parse comma-separated tools and install what's needed
+        IFS=',' read -ra TOOL_LIST <<< "${{ inputs.tools }}"
+        
+        for tool in "${TOOL_LIST[@]}"; do
+          case "$tool" in
+            "lint")
+              echo "Installing linting tools..."
+              go install golang.org/x/tools/cmd/goimports@latest &
+              ;;
+            "security") 
+              echo "Installing security tools..."
+              go install golang.org/x/vuln/cmd/govulncheck@latest &
+              go install github.com/sonatype-nexus-community/nancy@latest &
+              ;;
+            "build")
+              echo "Installing build tools..."
+              go install github.com/goreleaser/goreleaser@latest &
+              ;;
+            "all")
+              echo "Installing all tools..."
+              go install golang.org/x/tools/cmd/goimports@latest &
+              go install golang.org/x/vuln/cmd/govulncheck@latest &
+              go install github.com/sonatype-nexus-community/nancy@latest &
+              go install github.com/goreleaser/goreleaser@latest &
+              ;;
+          esac
+        done
+        
+        # Wait for all background installs to complete
+        wait
+        
+        end_time=$(date +%s)
+        duration=$((end_time - start_time))
+        echo "✅ Tool installation completed in ${duration}s"
+        
+    - name: Verify tools are available
+      shell: bash
+      run: |
+        echo "Verifying installed tools..."
+        IFS=',' read -ra TOOL_LIST <<< "${{ inputs.tools }}"
+        
+        for tool in "${TOOL_LIST[@]}"; do
+          case "$tool" in
+            "lint")
+              command -v goimports || exit 1
+              ;;
+            "security")
+              command -v govulncheck || exit 1
+              command -v nancy || exit 1
+              ;;
+            "build")
+              command -v goreleaser || exit 1
+              ;;
+            "all")
+              command -v goimports || exit 1
+              command -v govulncheck || exit 1
+              command -v nancy || exit 1
+              command -v goreleaser || exit 1
+              ;;
+          esac
+        done
+        echo "Tools verification complete"

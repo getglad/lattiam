@@ -1,0 +1,16 @@
+{
+  "name": "s3-bucket-simple",
+  "terraform_json": {
+    "resource": {
+      "aws_s3_bucket": {
+        "test_bucket": {
+          "bucket": "test-bucket-simple",
+          "tags": {
+            "Environment": "test",
+            "Purpose": "testing"
+          }
+        }
+      }
+    }
+  }
+}

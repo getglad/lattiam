@@ -1,0 +1,82 @@
+name: Nightly Tests
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 2 AM UTC daily
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  GO_VERSION: '1.23'
+  GOCACHE: ${{ github.workspace }}/.cache/go-build
+  GOMODCACHE: ${{ github.workspace }}/.cache/go-mod
+  GOPROXY: https://proxy.golang.org,direct
+  TESTCONTAINERS_RYUK_DISABLED: true
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  comprehensive-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+
+    - name: Setup LocalStack
+      uses: LocalStack/setup-localstack@v0.2.3
+      with:
+        image-tag: 'latest'
+        install-awslocal: 'true'
+        configuration: |
+          SERVICES=s3,dynamodb,sts,iam,ec2,lambda,cloudformation
+          DEBUG=0
+          DATA_DIR=/tmp/localstack/data
+
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@v8
+      with:
+        version: latest
+        args: --timeout=5m ./cmd/... ./internal/... ./pkg/... ./tests/...
+
+    - name: Setup Go tools
+      uses: ./.github/actions/setup-tools
+      with:
+        tools: 'all'
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Run comprehensive test suite
+      run: |
+        make qa
+        make test-all
+      env:
+        LATTIAM_USE_LOCALSTACK: true
+        LATTIAM_USE_INDIVIDUAL_REDIS: true
+        AWS_ENDPOINT_URL: http://localhost:4566
+        AWS_ACCESS_KEY_ID: test
+        AWS_SECRET_ACCESS_KEY: test
+        AWS_DEFAULT_REGION: us-east-1
+        TESTCONTAINERS_RYUK_DISABLED: true
+
+    - name: Generate coverage report
+      run: |
+        if [ -f coverage/coverage-all.out ]; then
+          mkdir -p coverage/reports
+          go tool cover -html=coverage/coverage-all.out -o coverage/reports/coverage-all.html
+          go tool cover -func=coverage/coverage-all.out > coverage/reports/coverage-summary.txt
+        fi
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: nightly-test-results-${{ github.run_id }}
+        path: |
+          coverage/
+          test-results/
+        retention-days: 30

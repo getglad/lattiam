@@ -1,0 +1,56 @@
+{
+  "name": "demo-s3-bucket-simple",
+  "terraform_json": {
+    "terraform": {
+      "required_providers": {
+        "random": {
+          "source": "hashicorp/random",
+          "version": "3.6.0"
+        },
+        "aws": {
+          "source": "hashicorp/aws",
+          "version": "6.2.0"
+        }
+      }
+    },
+    "provider": {
+      "aws": {
+        "region": "us-east-1",
+        "access_key": "test",
+        "secret_key": "test",
+        "skip_credentials_validation": true,
+        "skip_requesting_account_id": true,
+        "skip_metadata_api_check": true,
+        "s3_use_path_style": true,
+        "endpoints": {
+          "s3": "http://localstack:4566",
+          "sts": "http://localstack:4566",
+          "iam": "http://localstack:4566"
+        }
+      }
+    },
+    "resource": {
+      "random_string": {
+        "bucket_suffix": {
+          "length": 8,
+          "special": false,
+          "upper": false,
+          "keepers": {
+            "bucket_name": "renamed"
+          }
+        }
+      },
+      "aws_s3_bucket": {
+        "demo": {
+          "bucket": "lattiam-renamed-bucket-${random_string.bucket_suffix.result}",
+          "timeouts": {},
+          "tags": {
+            "Environment": "demo",
+            "ManagedBy": "lattiam",
+            "Renamed": "true"
+          }
+        }
+      }
+    }
+  }
+}

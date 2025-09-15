@@ -1,0 +1,59 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [ main ]
+
+env:
+  GO_VERSION: '1.23'
+  GOCACHE: ${{ github.workspace }}/.cache/go-build
+  GOMODCACHE: ${{ github.workspace }}/.cache/go-mod
+  GOPROXY: https://proxy.golang.org,direct
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+        cache-dependency-path: go.sum
+
+    - name: Cache test dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/.cache/go-mod
+          ~/.lattiam/test-providers
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}-providers-${{ hashFiles('internal/system/**') }}
+        restore-keys: |
+          ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}-providers-
+          ${{ runner.os }}-go-
+
+    - name: Download Go modules
+      run: go mod download
+
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@v8
+      with:
+        version: latest
+        args: --timeout=5m ./cmd/... ./internal/... ./pkg/... ./tests/...
+
+    - name: Setup Go tools
+      uses: ./.github/actions/setup-tools
+      with:
+        tools: 'all'
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Run validation checks
+      run: |
+        make check
+        make test

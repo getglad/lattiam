@@ -1,0 +1,191 @@
+# golangci-lint configuration for v2.4.0
+version: "2"
+
+run:
+  timeout: 5m
+  go: "1.25"
+  build-tags:
+    - "!swagger"
+
+formatters:
+  enable:
+    - gofumpt   # Stricter gofmt
+    - goimports # Organize imports
+  
+  settings:
+    goimports:
+      local-prefixes: 
+        - github.com/lattiam/lattiam
+
+linters:
+  default: none  # Use "none" to disable all linters
+  enable:
+    # Core & Essential
+    - errcheck    # Check error returns
+    - govet       # Suspicious constructs
+    - staticcheck # Comprehensive checks
+    - unused      # Unused code
+    - ineffassign # Ineffectual assignments
+    
+    # Security
+    - gosec         # Security issues
+    - bodyclose     # HTTP response bodies
+    - sqlclosecheck # SQL rows/statements
+    
+    # Code Style
+    - revive    # golint replacement
+    - goconst   # Repeated strings
+    
+    # Complexity
+    - gocyclo  # Cyclomatic complexity
+    - gocognit # Cognitive complexity
+    - funlen   # Function length
+    - dupl     # Duplicated code
+    
+    # Testing
+    - paralleltest # t.Parallel() usage
+    - testifylint  # testify issues
+    
+    # Error handling
+    - errorlint # Error wrapping
+    - wrapcheck # Wrapped errors
+    - nilerr    # nil returns with errors
+    
+    # Other best practices
+    - whitespace  # Trailing whitespace
+    - nolintlint  # nolint directives
+    - gocritic    # Opinionated checks
+    - misspell    # Spelling
+    - thelper     # Test helpers
+    - exhaustive  # Enum switches
+    - forbidigo   # Forbidden patterns
+    - prealloc    # Preallocations
+    - unconvert   # Unnecessary conversions
+    - musttag     # Required struct tags
+  
+  settings:
+    # Complexity
+    gocyclo:
+      min-complexity: 15
+    gocognit:
+      min-complexity: 20
+    funlen:
+      lines: 80
+      statements: 50
+    
+    # Duplication
+    dupl:
+      threshold: 150
+    
+    # Security
+    gosec:
+      excludes:
+        - G101 # Hardcoded credentials (false positives)
+        - G404 # Weak random OK for tests
+        - G501 # MD5 needed for Terraform
+        - G505 # SHA1 needed for Terraform
+        - G306 # File permissions in tests
+        - G115 # Integer overflow false positives
+    
+    # Testing
+    paralleltest:
+      ignore-missing: false
+      ignore-missing-subtests: true
+    
+    # Additional settings
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+        - experimental
+        - opinionated
+      disabled-checks:
+        - hugeParam
+        - rangeValCopy
+        - commentedOutCode
+        - whyNoLint
+        - paramTypeCombine
+    
+    forbidigo:
+      forbid:
+        - pattern: 'fmt\.Print.*'
+        - pattern: 'panic\(.*\)'
+      exclude-godoc-examples: true
+    
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: true
+    
+    exhaustive:
+      default-signifies-exhaustive: true
+    
+    misspell:
+      locale: US
+    
+    prealloc:
+      simple: true
+      range-loops: true
+      for-loops: false
+    
+    musttag:
+      functions:
+        - name: json.Marshal
+          tag: json
+        - name: json.MarshalIndent
+          tag: json
+        - name: json.Unmarshal
+          tag: json
+    
+    revive:
+      severity: warning
+  
+  exclusions:
+    rules:
+      # Exclude docs package completely
+      - path: docs/
+        linters:
+          - goanalysis_metalinter
+      # Exclude test files from certain linters
+      - path: _test\.go
+        linters:
+          - funlen
+          - goconst
+          - dupl
+          - forbidigo
+          - nilerr
+          - gocritic
+          - wrapcheck
+      
+      # Proto-generated files
+      - path: internal/proto/
+        linters:
+          - revive
+          - goconst
+          - funlen
+          - gocyclo
+          - gocognit
+      
+      # Disable specific revive checks for packages with common names
+      - text: "avoid meaningless package names"
+        linters:
+          - revive
+      
+      # CLI commands can use fmt.Print
+      - path: cmd/
+        linters:
+          - forbidigo
+    
+    # Exclude directories from linting
+    paths:
+      - clones
+      - .cache
+      - scratch
+      - .git
+      - vendor
+
+issues:
+  # Limits
+  max-issues-per-linter: 50
+  max-same-issues: 10

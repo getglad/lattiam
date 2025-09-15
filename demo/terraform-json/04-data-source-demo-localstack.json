@@ -1,0 +1,62 @@
+{
+  "name": "data-source-complete-demo",
+  "terraform_json": {
+    "terraform": {
+      "required_providers": {
+        "aws": {
+          "source": "hashicorp/aws",
+          "version": "6.2.0"
+        },
+        "random": {
+          "source": "hashicorp/random",
+          "version": "3.6.0"
+        }
+      }
+    },
+    "provider": {
+      "aws": {
+        "region": "us-east-1",
+        "access_key": "test",
+        "secret_key": "test",
+        "skip_credentials_validation": true,
+        "skip_requesting_account_id": true,
+        "skip_metadata_api_check": true,
+        "s3_use_path_style": true,
+        "endpoints": {
+          "s3": "http://localstack:4566",
+          "sts": "http://localstack:4566",
+          "iam": "http://localstack:4566",
+          "ec2": "http://localstack:4566"
+        }
+      }
+    },
+    "data": {
+      "aws_caller_identity": {
+        "current": {}
+      },
+      "aws_region": {
+        "current": {}
+      }
+    },
+    "resource": {
+      "random_string": {
+        "suffix": {
+          "length": 8,
+          "special": false,
+          "upper": false
+        }
+      },
+      "aws_s3_bucket": {
+        "example": {
+          "bucket": "lattiam-ds-demo-${data.aws_region.current.name}-${random_string.suffix.result}",
+          "tags": {
+            "Name": "Data Source Demo",
+            "Region": "${data.aws_region.current.name}",
+            "Account": "${data.aws_caller_identity.current.account_id}"
+          },
+          "timeouts": {}
+        }
+      }
+    }
+  }
+}

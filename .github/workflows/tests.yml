@@ -1,0 +1,178 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.23'
+  GOCACHE: ${{ github.workspace }}/.cache/go-build
+  GOMODCACHE: ${{ github.workspace }}/.cache/go-mod
+  GOPROXY: https://proxy.golang.org,direct
+  TESTCONTAINERS_RYUK_DISABLED: true
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup LocalStack
+      uses: LocalStack/setup-localstack@v0.2.3
+      with:
+        image-tag: 'latest'
+        install-awslocal: 'true'
+        configuration: |
+          SERVICES=s3,dynamodb,sts,iam,ec2,lambda,cloudformation
+          DEBUG=0
+          DATA_DIR=/tmp/localstack/data
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+        cache-dependency-path: go.sum
+
+    - name: Cache test dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/.cache/go-mod
+          ~/.lattiam/test-providers
+        key: ${{ runner.os }}-go-integration-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-integration-
+          ${{ runner.os }}-go-
+
+    - name: Download Go modules
+      run: go mod download
+
+    - name: Setup Go tools
+      uses: ./.github/actions/setup-tools
+      with:
+        tools: 'all'
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Run integration tests
+      run: make test-integration
+      env:
+        LATTIAM_USE_LOCALSTACK: true
+        AWS_ENDPOINT_URL: http://localhost:4566
+        AWS_ACCESS_KEY_ID: test
+        AWS_SECRET_ACCESS_KEY: test
+        AWS_DEFAULT_REGION: us-east-1
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: integration-test-results-${{ github.sha }}
+        path: |
+          coverage/
+          test-results/
+        retention-days: 7
+
+  race-detection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+
+    - name: Setup Go tools
+      uses: ./.github/actions/setup-tools
+      with:
+        tools: 'all'
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Run race detection tests
+      run: make test-race
+
+  acceptance-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup LocalStack
+      uses: LocalStack/setup-localstack@v0.2.3
+      with:
+        image-tag: 'latest'
+        install-awslocal: 'true'
+        configuration: |
+          SERVICES=s3,dynamodb,sts,iam,ec2,lambda,cloudformation
+          DEBUG=0
+          DATA_DIR=/tmp/localstack/data
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+
+    - name: Cache test dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/.cache/go-mod
+          ~/.lattiam/test-providers
+        key: ${{ runner.os }}-go-acceptance-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-acceptance-
+          ${{ runner.os }}-go-
+
+    - name: Download Go modules
+      run: go mod download
+
+    - name: Setup Go tools
+      uses: ./.github/actions/setup-tools
+      with:
+        tools: 'all'
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Run OAT tests
+      run: make test-oat
+      env:
+        LATTIAM_USE_LOCALSTACK: true
+        AWS_ENDPOINT_URL: http://localhost:4566
+        AWS_ACCESS_KEY_ID: test
+        AWS_SECRET_ACCESS_KEY: test
+        AWS_DEFAULT_REGION: us-east-1
+
+    - name: Run demo tests
+      run: make test-demo
+      env:
+        LATTIAM_USE_LOCALSTACK: true
+        AWS_ENDPOINT_URL: http://localhost:4566
+        AWS_ACCESS_KEY_ID: test
+        AWS_SECRET_ACCESS_KEY: test
+        AWS_DEFAULT_REGION: us-east-1
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: acceptance-test-results-${{ github.sha }}
+        path: |
+          coverage/
+          test-results/
+        retention-days: 7

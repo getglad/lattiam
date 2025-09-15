@@ -1,0 +1,26 @@
+{
+  "resource": {
+    "aws_security_group": {
+      "test_sg": {
+        "name": "test-security-group",
+        "description": "Test security group",
+        "vpc_id": "vpc-12345678"
+      }
+    },
+    "aws_instance": {
+      "test_instance": {
+        "ami": "ami-12345678",
+        "instance_type": "t2.micro",
+        "tags": {
+          "Name": "test-instance"
+        }
+      }
+    },
+    "aws_s3_bucket": {
+      "test_bucket": {
+        "bucket": "my-test-bucket-12345",
+        "acl": "private"
+      }
+    }
+  }
+}
